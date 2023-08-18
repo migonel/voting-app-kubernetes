@@ -1,0 +1,49 @@
+name: Build Worker
+
+on:
+    # we want pull requests so we can build(test) but not push to image registry
+    push:
+      branches:
+        - 'master'
+      # only build when important files change
+      paths:
+        - 'vote/**'
+        - '.github/workflows/build-worker.yml'
+    pull_request:
+      branches:
+        - 'master'
+      # only build when important files change
+      paths:
+        - 'vote/**'
+        - '.github/workflows/build-worker.yml'
+
+jobs:
+  docker_build_push_acr:
+    name: 'Docker Build and Push to ACR'
+    runs-on: ubuntu-latest
+    environment: production
+  
+    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+    defaults:
+      run:
+        shell: bash
+  
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v2
+  
+    - name: 'Docker Login'
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+ 
+    - name: Build the image and push it to ACR
+      uses: docker/build-push-action@v2
+      with:
+        context: vote
+        push: true
+        tags: votingappregistry08.azurecr.io/votingappregistry08.azurecr.io:${{ github.sha }}
+        file: worker/Dockerfile
